@@ -2,49 +2,40 @@
     font-family: "Jersey15";
     src: url("Jersey15-Regular.ttf") format("truetype");
 }
-
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
-
 body {
     background: #000;
     color: #fff;
-
     width: 100vw;
     height: 100vh;
-
     display: flex;
     justify-content: center;
     align-items: center;
-
     overflow: hidden;
 }
-
 .content {
+    position: relative;      
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
-
-    /* Move only the image upward without moving the text center */
-    transform: translateY(0);
 }
-
 .logo {
+    position: absolute;
+    bottom: 100%;               
+    left: 50%;
+    transform: translateX(-50%); 
     width: 180px;
     height: auto;
-
-    margin-bottom: 25px;
+    margin-bottom: 25px;        
 }
-
 h1 {
     font-family: "Jersey15", sans-serif;
-
     font-size: clamp(4rem, 10vw, 8rem);
     font-weight: normal;
     letter-spacing: 2px;
-
     text-align: center;
 }
