@@ -21,27 +21,25 @@ body {
     align-items: center;
 
     overflow: hidden;
-}
 
-.container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    text-align: center;
-
-    gap: 20px;
+    position: relative;
 }
 
 .logo {
-    width: 200px;
-    max-width: 50vw;
-    height: auto;
+    position: absolute;
+
+    width: 220px;
+    max-width: 40vw;
+
+    top: calc(50% - 180px);
+
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 h1 {
     font-family: "Jersey15", sans-serif;
+
     font-size: clamp(4rem, 10vw, 8rem);
     font-weight: normal;
     letter-spacing: 2px;
