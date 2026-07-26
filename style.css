@@ -17,6 +17,31 @@ body {
     align-items: center;
     overflow: hidden;
 }
+.top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 50px;
+    padding: 60px 60px;
+    z-index: 10;
+}
+.social-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+    opacity: 0.85;
+    filter: brightness(0) invert(1);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.top-bar a:hover .social-icon {
+    opacity: 1;
+    transform: translateY(-2px);
+}
 .content {
     position: relative;      
     display: flex;
