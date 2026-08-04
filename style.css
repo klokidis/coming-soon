@@ -44,8 +44,69 @@ body {
     opacity: 1;
     transform: translateY(-2px);
 }
+.bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 20px;
+    z-index: 10;
+}
+.contact-email {
+    position: relative;
+    font-family: "Jersey15", sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 1px;
+    color: #fff;
+    text-decoration: none;
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+    background: none;
+    border: 0;
+    padding: 4px 2px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.contact-email:hover {
+    opacity: 1;
+}
+.contact-email:focus-visible {
+    opacity: 1;
+    outline: 1px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 4px;
+}
+.email-text,
+.copied-note {
+    transition: opacity 0.2s ease;
+}
+.copied-note {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+}
+.contact-email.is-copied .email-text {
+    opacity: 0;
+}
+.contact-email.is-copied .copied-note {
+    opacity: 1;
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+}
 .content {
-    position: relative;      
+    position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -86,6 +147,12 @@ h1 {
         font-size: clamp(2.75rem, 11vw, 5rem);
         letter-spacing: 1px;
     }
+    .bottom-bar {
+        padding: 28px 20px;
+    }
+    .contact-email {
+        font-size: 1.1rem;
+    }
 }
 
 /* --- Phone --- */
@@ -106,6 +173,12 @@ h1 {
         font-size: clamp(2rem, 12vw, 3rem);
         letter-spacing: 1px;
     }
+    .bottom-bar {
+        padding: 20px;
+    }
+    .contact-email {
+        font-size: 1rem;
+    }
 }
 
 /* --- Landscape phone (short viewport) --- */
@@ -125,6 +198,12 @@ h1 {
     h1 {
         font-size: clamp(1.75rem, 7vh, 3rem);
     }
+    .bottom-bar {
+        padding: 12px 20px;
+    }
+    .contact-email {
+        font-size: 0.95rem;
+    }
 }
 
 /* Tap targets stay finger-friendly without enlarging the icons */
@@ -138,5 +217,9 @@ h1 {
     }
     .top-bar a:hover .social-icon {
         transform: none;
+    }
+    .contact-email {
+        min-height: 44px;
+        padding: 10px 8px;
     }
 }
