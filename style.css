@@ -22,9 +22,16 @@ body {
     justify-content: center;
     align-items: center;
     overflow-x: hidden;
-    padding: 110px 20px 90px;
-    padding-left: max(20px, env(safe-area-inset-left));
-    padding-right: max(20px, env(safe-area-inset-right));
+    /*
+     * Padding stays symmetric on both axes so the flex centering lands the
+     * content group on the exact centre of the viewport. Each side clears the
+     * taller of the two fixed bars, and the horizontal padding takes the
+     * larger of the two safe-area insets so a notch on one edge only (landscape
+     * phones) can't nudge the group off-centre.
+     */
+    padding: 110px 20px;
+    padding-left: max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
+    padding-right: max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
     -webkit-font-smoothing: antialiased;
 }
 .top-bar {
@@ -188,7 +195,7 @@ h1 {
 /* --- Tablet --- */
 @media (max-width: 768px) {
     body {
-        padding: 90px 20px 80px;
+        padding: 90px 20px;
     }
     .top-bar {
         gap: 32px;
@@ -222,9 +229,9 @@ h1 {
 /* --- Phone --- */
 @media (max-width: 480px) {
     body {
-        padding: 80px 12px 76px;
-        padding-left: max(12px, env(safe-area-inset-left));
-        padding-right: max(12px, env(safe-area-inset-right));
+        padding: 84px 12px;
+        padding-left: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
+        padding-right: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
     }
     .top-bar {
         gap: 22px;
@@ -267,7 +274,7 @@ h1 {
 /* --- Landscape phone (short viewport) --- */
 @media (max-height: 480px) and (orientation: landscape) {
     body {
-        padding: 60px 20px 56px;
+        padding: 60px 20px;
     }
     .top-bar {
         padding: 14px 20px;
