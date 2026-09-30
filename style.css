@@ -151,6 +151,161 @@ h1 {
     margin-top: 20px;
 }
 
+/* --- Glitch --- */
+
+/* CRT scanlines over the whole page */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 50;
+    background: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 2px,
+        rgba(255, 255, 255, 0.035) 2px,
+        rgba(255, 255, 255, 0.035) 3px
+    );
+}
+/* Faint band that rolls down the screen */
+body::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 140px;
+    pointer-events: none;
+    z-index: 51;
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(255, 255, 255, 0.045),
+        transparent
+    );
+    transform: translateY(-140px);
+    animation: glitch-roll 7s linear infinite;
+}
+@keyframes glitch-roll {
+    to { transform: translateY(100vh); }
+}
+
+.glitch {
+    position: relative;
+    animation: glitch-jitter 4s steps(1, end) infinite;
+}
+.glitch::before,
+.glitch::after {
+    content: attr(data-text);
+    position: absolute;
+    inset: 0;
+    background: #000;
+    pointer-events: none;
+    clip-path: inset(50% 0 50% 0);
+}
+.glitch::before {
+    color: #ff2a6d;
+    animation: glitch-slice-a 4s steps(1, end) infinite;
+}
+.glitch::after {
+    color: #05d9e8;
+    animation: glitch-slice-b 4s steps(1, end) infinite;
+}
+
+@keyframes glitch-jitter {
+    0%, 100% { transform: none; text-shadow: none; opacity: 1; }
+    40% { transform: translateX(2px); text-shadow: -2px 0 #ff2a6d, 2px 0 #05d9e8; }
+    41% { transform: translateX(-1px) skewX(6deg); }
+    42% { transform: none; text-shadow: none; }
+    85% { transform: skewX(-10deg) translateX(3px); text-shadow: -3px 0 #ff2a6d, 3px 0 #05d9e8; }
+    87% { transform: skewX(5deg) translateX(-2px); opacity: 0.6; }
+    89% { transform: translateX(4px); opacity: 1; }
+    91% { transform: skewX(-3deg); text-shadow: 2px 0 #ff2a6d, -2px 0 #05d9e8; }
+    93% { transform: none; text-shadow: none; }
+}
+@keyframes glitch-slice-a {
+    0%, 100% { clip-path: inset(50% 0 50% 0); transform: none; }
+    40% { clip-path: inset(20% 0 60% 0); transform: translateX(-5px); }
+    42% { clip-path: inset(50% 0 50% 0); transform: none; }
+    85% { clip-path: inset(10% 0 70% 0); transform: translateX(-7px); }
+    87% { clip-path: inset(60% 0 15% 0); transform: translateX(5px); }
+    89% { clip-path: inset(30% 0 45% 0); transform: translateX(-3px); }
+    91% { clip-path: inset(80% 0 4% 0); transform: translateX(8px); }
+    93% { clip-path: inset(50% 0 50% 0); transform: none; }
+}
+@keyframes glitch-slice-b {
+    0%, 100% { clip-path: inset(50% 0 50% 0); transform: none; }
+    41% { clip-path: inset(65% 0 10% 0); transform: translateX(6px); }
+    42% { clip-path: inset(50% 0 50% 0); transform: none; }
+    86% { clip-path: inset(70% 0 8% 0); transform: translateX(6px); }
+    88% { clip-path: inset(5% 0 80% 0); transform: translateX(-6px); }
+    90% { clip-path: inset(45% 0 30% 0); transform: translateX(4px); }
+    92% { clip-path: inset(15% 0 65% 0); transform: translateX(-8px); }
+    94% { clip-path: inset(50% 0 50% 0); transform: none; }
+}
+
+/* Heavier glitch while the title is decrypting (class toggled from JS) */
+.glitch.is-glitching {
+    animation: glitch-burst 0.3s steps(1, end) infinite;
+}
+.glitch.is-glitching::before {
+    animation: glitch-slice-a 0.6s steps(1, end) infinite;
+    animation-delay: -2.4s;
+}
+.glitch.is-glitching::after {
+    animation: glitch-slice-b 0.6s steps(1, end) infinite;
+    animation-delay: -2.4s;
+}
+@keyframes glitch-burst {
+    0%, 100% { transform: translateX(-2px); text-shadow: -3px 0 #ff2a6d, 3px 0 #05d9e8; }
+    25% { transform: skewX(8deg) translateX(3px); text-shadow: 3px 0 #ff2a6d, -3px 0 #05d9e8; opacity: 0.7; }
+    50% { transform: translateX(1px); opacity: 1; }
+    75% { transform: skewX(-6deg) translateX(-3px); text-shadow: -2px 0 #05d9e8, 2px 0 #ff2a6d; }
+}
+
+/* Hidden binary message, overlaid on the title so the layout never shifts */
+.binary {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 100%;
+    min-width: min(18rem, 80vw);
+    transform: translateX(-50%);
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    word-spacing: 0.4em;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: center;
+    text-shadow: 0 0 6px rgba(5, 217, 232, 0.6);
+    visibility: hidden;
+}
+.glitch.show-binary .binary {
+    visibility: visible;
+}
+.glitch.show-binary .glitch-text {
+    visibility: hidden;
+}
+.glitch.show-binary::before,
+.glitch.show-binary::after {
+    display: none;
+}
+
+/* Logo glitches on its own, off-beat from the title */
+.logo {
+    animation: glitch-logo 6.5s steps(1, end) infinite;
+}
+@keyframes glitch-logo {
+    0%, 100% { transform: none; filter: none; clip-path: none; }
+    60% { transform: translateX(-4px) skewX(8deg); filter: drop-shadow(-3px 0 #ff2a6d) drop-shadow(3px 0 #05d9e8); }
+    61% { transform: translateX(3px); clip-path: inset(0 0 35% 0); }
+    62% { transform: translateX(-2px); clip-path: inset(40% 0 0 0); filter: drop-shadow(3px 0 #ff2a6d) drop-shadow(-3px 0 #05d9e8); }
+    63% { transform: none; filter: none; clip-path: none; }
+    64% { transform: translateX(5px) skewX(-6deg); filter: drop-shadow(-2px 0 #05d9e8); }
+    65% { transform: none; filter: none; }
+}
+
 /* --- Tablet --- */
 @media (max-width: 768px) {
     body {
@@ -175,6 +330,9 @@ h1 {
     h1 {
         letter-spacing: 1px;
         margin-top: 14px;
+    }
+    .binary {
+        font-size: 0.95rem;
     }
     .bottom-bar {
         padding: 28px 20px;
@@ -212,6 +370,10 @@ h1 {
         font-size: clamp(1.1rem, 6vw, 1.75rem);
         margin-top: 10px;
     }
+    .binary {
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
     .bottom-bar {
         padding: 20px;
         padding-bottom: max(20px, env(safe-area-inset-bottom));
@@ -245,6 +407,10 @@ h1 {
         font-size: clamp(1rem, 4vh, 1.6rem);
         margin-top: 8px;
     }
+    .binary {
+        font-size: 0.7rem;
+        letter-spacing: 1px;
+    }
     .bottom-bar {
         padding: 12px 20px;
         padding-bottom: max(12px, env(safe-area-inset-bottom));
@@ -277,5 +443,16 @@ h1 {
     * {
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
+    }
+    /* A 0.01ms infinite loop would strobe, so switch the glitch off entirely */
+    .glitch,
+    .logo,
+    body::after {
+        animation: none !important;
+    }
+    .glitch::before,
+    .glitch::after,
+    body::after {
+        display: none;
     }
 }

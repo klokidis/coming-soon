@@ -29,7 +29,7 @@
     <div class="content">
         <img src="logo.png" alt="Logo" class="logo">
 
-        <h1>Coming Very Soon</h1>
+        <h1 class="glitch" id="glitch-title" data-text="Coming Very Soon" aria-label="Coming Very Soon"><span class="glitch-text">Coming Very Soon</span><span class="binary" aria-hidden="true"></span></h1>
     </div>
 
     <div class="bottom-bar">
@@ -76,6 +76,92 @@
                     status.textContent = '';
                 }, 1600);
             });
+        })();
+
+        // The title loops between "Coming Very Soon" and a hidden binary
+        // message, dissolving through random bits on each switch.
+        (function () {
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            const title = document.getElementById('glitch-title');
+            const label = title.querySelector('.glitch-text');
+            const binary = title.querySelector('.binary');
+            const original = title.dataset.text;
+            const message = 'first connection with earth';
+            const encoded = message.split('').map(function (ch) {
+                return ch.charCodeAt(0).toString(2).padStart(8, '0');
+            }).join(' ');
+
+            function randomBit() {
+                return Math.random() < 0.5 ? '0' : '1';
+            }
+
+            function randomBits(template) {
+                return template.replace(/\S/g, randomBit);
+            }
+
+            function setLabel(text) {
+                label.textContent = text;
+                title.dataset.text = text;
+            }
+
+            function setBinary(text) {
+                binary.textContent = text;
+            }
+
+            // Each character switches from `from` to `to` on its own random
+            // frame, flickering as a random bit in between.
+            function glitchText(from, to, render, done) {
+                const length = Math.max(from.length, to.length);
+                const start = [];
+                const end = [];
+                for (let i = 0; i < length; i++) {
+                    start.push(Math.floor(Math.random() * 6));
+                    end.push(start[i] + 3 + Math.floor(Math.random() * 7));
+                }
+                const frames = Math.max.apply(null, end);
+                let frame = 0;
+
+                const timer = setInterval(function () {
+                    frame++;
+                    let text = '';
+                    for (let i = 0; i < length; i++) {
+                        const a = from[i] || '';
+                        const b = to[i] || '';
+                        if (frame < start[i]) text += a;
+                        else if (frame >= end[i]) text += b;
+                        else if (a === ' ' && b === ' ') text += ' ';
+                        else text += randomBit();
+                    }
+                    render(frame >= frames ? to : text);
+                    if (frame >= frames) {
+                        clearInterval(timer);
+                        done();
+                    }
+                }, 45);
+            }
+
+            function cycle() {
+                title.classList.add('is-glitching');
+                glitchText(original, randomBits(original), setLabel, function () {
+                    title.classList.add('show-binary');
+                    glitchText(randomBits(encoded), encoded, setBinary, function () {
+                        title.classList.remove('is-glitching');
+                        setTimeout(function () {
+                            title.classList.add('is-glitching');
+                            glitchText(encoded, randomBits(encoded), setBinary, function () {
+                                title.classList.remove('show-binary');
+                                glitchText(randomBits(original), original, setLabel, function () {
+                                    title.classList.remove('is-glitching');
+                                    setTimeout(cycle, 3000);
+                                });
+                            });
+                        }, 3000);
+                    });
+                });
+            }
+
+            setTimeout(cycle, 2000);
         })();
     </script>
 
