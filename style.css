@@ -123,7 +123,17 @@ body {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
 }
+/*
+ * --w is the shared width of the video and the countdown row. It's capped by
+ * the viewport width and by the height left after the bars, logo and gaps
+ * (--reserve), so the whole group always fits on one screen. The 1.4 factor
+ * turns that leftover height into a width: the video is 0.5625w tall and the
+ * countdown roughly 0.15w.
+ */
 .content {
+    --reserve: 410px;
+    --gutter: 40px;
+    --w: clamp(220px, min(100vw - var(--gutter), (100vh - var(--reserve)) * 1.4), 800px);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -133,178 +143,73 @@ body {
     width: 100%;
     max-width: 100%;
 }
+@supports (height: 100dvh) {
+    .content {
+        --w: clamp(220px, min(100vw - var(--gutter), (100dvh - var(--reserve)) * 1.4), 800px);
+    }
+}
 .logo {
     width: 140px;
     max-width: 45vw;
     height: auto;
     display: block;
 }
-
-h1 {
+/*
+ * The countdown row is sized from one custom property so every part scales
+ * together. Its full width is roughly 8em, so --w / 9 keeps it just inside
+ * the video's width.
+ */
+.countdown {
+    --cd: calc(var(--w) / 9);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.14em;
     font-family: "Jersey15", sans-serif;
-    font-size: clamp(1.2rem, 4.75vw, 3.5rem);
-    font-weight: normal;
-    letter-spacing: 2px;
-    text-align: center;
+    font-size: var(--cd);
+    max-width: 100%;
+}
+.countdown .unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 1.9em;
+}
+.countdown .value {
+    line-height: 1;
+    letter-spacing: 0.03em;
+    font-variant-numeric: tabular-nums;
+}
+.countdown .label {
+    /* Keeps labels legible once --cd gets small on phones. */
+    font-size: max(0.8rem, 0.22em);
+    line-height: 1;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
     white-space: nowrap;
-    opacity: 0.9;
-    margin-top: 20px;
+    opacity: 0.6;
+    margin-top: 0.85em;
 }
-
-/* --- Glitch --- */
-
-/* CRT scanlines over the whole page */
-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    background: repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent 2px,
-        rgba(255, 255, 255, 0.035) 2px,
-        rgba(255, 255, 255, 0.035) 3px
-    );
+.countdown .sep {
+    line-height: 1;
+    opacity: 0.35;
 }
-/* Faint band that rolls down the screen */
-body::after {
-    content: "";
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 140px;
-    pointer-events: none;
-    z-index: 51;
-    background: linear-gradient(
-        to bottom,
-        transparent,
-        rgba(255, 255, 255, 0.045),
-        transparent
-    );
-    transform: translateY(-140px);
-    animation: glitch-roll 7s linear infinite;
-}
-@keyframes glitch-roll {
-    to { transform: translateY(100vh); }
-}
-
-.glitch {
-    position: relative;
-    animation: glitch-jitter 4s steps(1, end) infinite;
-}
-.glitch::before,
-.glitch::after {
-    content: attr(data-text);
-    position: absolute;
-    inset: 0;
-    background: #000;
-    pointer-events: none;
-    clip-path: inset(50% 0 50% 0);
-}
-.glitch::before {
-    color: #ff2a6d;
-    animation: glitch-slice-a 4s steps(1, end) infinite;
-}
-.glitch::after {
-    color: #05d9e8;
-    animation: glitch-slice-b 4s steps(1, end) infinite;
-}
-
-@keyframes glitch-jitter {
-    0%, 100% { transform: none; text-shadow: none; opacity: 1; }
-    40% { transform: translateX(2px); text-shadow: -2px 0 #ff2a6d, 2px 0 #05d9e8; }
-    41% { transform: translateX(-1px) skewX(6deg); }
-    42% { transform: none; text-shadow: none; }
-    85% { transform: skewX(-10deg) translateX(3px); text-shadow: -3px 0 #ff2a6d, 3px 0 #05d9e8; }
-    87% { transform: skewX(5deg) translateX(-2px); opacity: 0.6; }
-    89% { transform: translateX(4px); opacity: 1; }
-    91% { transform: skewX(-3deg); text-shadow: 2px 0 #ff2a6d, -2px 0 #05d9e8; }
-    93% { transform: none; text-shadow: none; }
-}
-@keyframes glitch-slice-a {
-    0%, 100% { clip-path: inset(50% 0 50% 0); transform: none; }
-    40% { clip-path: inset(20% 0 60% 0); transform: translateX(-5px); }
-    42% { clip-path: inset(50% 0 50% 0); transform: none; }
-    85% { clip-path: inset(10% 0 70% 0); transform: translateX(-7px); }
-    87% { clip-path: inset(60% 0 15% 0); transform: translateX(5px); }
-    89% { clip-path: inset(30% 0 45% 0); transform: translateX(-3px); }
-    91% { clip-path: inset(80% 0 4% 0); transform: translateX(8px); }
-    93% { clip-path: inset(50% 0 50% 0); transform: none; }
-}
-@keyframes glitch-slice-b {
-    0%, 100% { clip-path: inset(50% 0 50% 0); transform: none; }
-    41% { clip-path: inset(65% 0 10% 0); transform: translateX(6px); }
-    42% { clip-path: inset(50% 0 50% 0); transform: none; }
-    86% { clip-path: inset(70% 0 8% 0); transform: translateX(6px); }
-    88% { clip-path: inset(5% 0 80% 0); transform: translateX(-6px); }
-    90% { clip-path: inset(45% 0 30% 0); transform: translateX(4px); }
-    92% { clip-path: inset(15% 0 65% 0); transform: translateX(-8px); }
-    94% { clip-path: inset(50% 0 50% 0); transform: none; }
-}
-
-/* Heavier glitch while the title is decrypting (class toggled from JS) */
-.glitch.is-glitching {
-    animation: glitch-burst 0.3s steps(1, end) infinite;
-}
-.glitch.is-glitching::before {
-    animation: glitch-slice-a 0.6s steps(1, end) infinite;
-    animation-delay: -2.4s;
-}
-.glitch.is-glitching::after {
-    animation: glitch-slice-b 0.6s steps(1, end) infinite;
-    animation-delay: -2.4s;
-}
-@keyframes glitch-burst {
-    0%, 100% { transform: translateX(-2px); text-shadow: -3px 0 #ff2a6d, 3px 0 #05d9e8; }
-    25% { transform: skewX(8deg) translateX(3px); text-shadow: 3px 0 #ff2a6d, -3px 0 #05d9e8; opacity: 0.7; }
-    50% { transform: translateX(1px); opacity: 1; }
-    75% { transform: skewX(-6deg) translateX(-3px); text-shadow: -2px 0 #05d9e8, 2px 0 #ff2a6d; }
-}
-
-/* Hidden binary message, overlaid on the title so the layout never shifts */
-.binary {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 100%;
-    min-width: min(18rem, 80vw);
-    transform: translateX(-50%);
-    font-size: 1.1rem;
-    letter-spacing: 1px;
-    word-spacing: 0.4em;
-    line-height: 1.4;
-    white-space: normal;
-    text-align: center;
-    text-shadow: 0 0 6px rgba(5, 217, 232, 0.6);
-    visibility: hidden;
-}
-.glitch.show-binary .binary {
-    visibility: visible;
-}
-.glitch.show-binary .glitch-text {
-    visibility: hidden;
-}
-.glitch.show-binary::before,
-.glitch.show-binary::after {
+.countdown.is-done {
     display: none;
 }
 
-/* Logo glitches on its own, off-beat from the title */
-.logo {
-    animation: glitch-logo 6.5s steps(1, end) infinite;
+.video {
+    width: var(--w);
+    aspect-ratio: 16 / 9;
+    background: #000;
 }
-@keyframes glitch-logo {
-    0%, 100% { transform: none; filter: none; clip-path: none; }
-    60% { transform: translateX(-4px) skewX(8deg); filter: drop-shadow(-3px 0 #ff2a6d) drop-shadow(3px 0 #05d9e8); }
-    61% { transform: translateX(3px); clip-path: inset(0 0 35% 0); }
-    62% { transform: translateX(-2px); clip-path: inset(40% 0 0 0); filter: drop-shadow(3px 0 #ff2a6d) drop-shadow(-3px 0 #05d9e8); }
-    63% { transform: none; filter: none; clip-path: none; }
-    64% { transform: translateX(5px) skewX(-6deg); filter: drop-shadow(-2px 0 #05d9e8); }
-    65% { transform: none; filter: none; }
+.video iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
 }
+
 
 /* --- Tablet --- */
 @media (max-width: 768px) {
@@ -322,17 +227,11 @@ body::after {
         height: 26px;
     }
     .content {
+        --reserve: 325px;
         gap: 18px;
     }
     .logo {
         width: 105px;
-    }
-    h1 {
-        letter-spacing: 1px;
-        margin-top: 14px;
-    }
-    .binary {
-        font-size: 0.95rem;
     }
     .bottom-bar {
         padding: 28px 20px;
@@ -361,18 +260,20 @@ body::after {
         height: 22px;
     }
     .content {
+        --reserve: 285px;
+        --gutter: 24px;
         gap: 14px;
     }
     .logo {
         width: 85px;
     }
-    h1 {
-        font-size: clamp(1.1rem, 6vw, 1.75rem);
-        margin-top: 10px;
+    .countdown {
+        gap: 0.1em;
     }
-    .binary {
-        font-size: 0.8rem;
-        letter-spacing: 1px;
+    .countdown .label {
+        font-size: max(0.8rem, 0.22em);
+        letter-spacing: 0.08em;
+        margin-top: 0.7em;
     }
     .bottom-bar {
         padding: 20px;
@@ -386,7 +287,7 @@ body::after {
 /* --- Landscape phone (short viewport) --- */
 @media (max-height: 480px) and (orientation: landscape) {
     body {
-        padding: 60px 20px;
+        padding: 68px 20px;
     }
     .top-bar {
         padding: 14px 20px;
@@ -398,18 +299,14 @@ body::after {
         height: 20px;
     }
     .content {
-        gap: 10px;
+        --reserve: 200px;
+        gap: 8px;
     }
     .logo {
-        width: 65px;
+        width: 48px;
     }
-    h1 {
-        font-size: clamp(1rem, 4vh, 1.6rem);
-        margin-top: 8px;
-    }
-    .binary {
-        font-size: 0.7rem;
-        letter-spacing: 1px;
+    .countdown .label {
+        margin-top: 0.6em;
     }
     .bottom-bar {
         padding: 12px 20px;
@@ -443,16 +340,5 @@ body::after {
     * {
         transition-duration: 0.01ms !important;
         animation-duration: 0.01ms !important;
-    }
-    /* A 0.01ms infinite loop would strobe, so switch the glitch off entirely */
-    .glitch,
-    .logo,
-    body::after {
-        animation: none !important;
-    }
-    .glitch::before,
-    .glitch::after,
-    body::after {
-        display: none;
     }
 }
