@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
+    <meta name="theme-color" content="#2b8153">
     <title>Entanglement: Our End</title>
 
     <link rel="icon" type="image/png" href="logo.png">
@@ -14,7 +14,10 @@
 
 <body>
 
-    <div class="top-bar">
+    <canvas class="scene" id="scene" aria-hidden="true"></canvas>
+    <canvas class="leaves" id="leaves" aria-hidden="true"></canvas>
+
+    <div class="socials">
         <a href="https://www.instagram.com/entanglement_our_end/" target="_blank" rel="noopener" aria-label="Instagram">
             <img src="instagram.png" alt="Instagram" class="social-icon">
         </a>
@@ -27,33 +30,16 @@
     </div>
 
     <div class="content">
-        <img src="logo.png" alt="Logo" class="logo">
+        <img src="logo.png" alt="Entanglement: Our End" class="logo">
 
         <div class="video">
             <iframe src="https://www.youtube.com/embed/yCqmoc20dPE" title="Entanglement: Our End" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
         </div>
 
-        <div class="countdown" id="countdown" data-target="2026-10-07T14:00:00-04:00" role="timer" aria-live="off">
-            <div class="unit">
-                <span class="value" id="cd-days">00</span>
-                <span class="label">Days</span>
-            </div>
-            <span class="sep" aria-hidden="true">:</span>
-            <div class="unit">
-                <span class="value" id="cd-hours">00</span>
-                <span class="label">Hours</span>
-            </div>
-            <span class="sep" aria-hidden="true">:</span>
-            <div class="unit">
-                <span class="value" id="cd-minutes">00</span>
-                <span class="label">Minutes</span>
-            </div>
-            <span class="sep" aria-hidden="true">:</span>
-            <div class="unit">
-                <span class="value" id="cd-seconds">00</span>
-                <span class="label">Seconds</span>
-            </div>
-        </div>
+        <a class="wishlist" id="wishlist" href="https://store.steampowered.com/app/5360880/Entanglement_Our_End/" data-app="steam://store/5360880" target="_blank" rel="noopener">
+            <img src="steam.png" alt="" class="wishlist-icon">
+            <span>Wishlist on Steam</span>
+        </a>
     </div>
 
     <div class="bottom-bar">
@@ -65,56 +51,331 @@
     </div>
 
     <script>
+        // Forest background: grass first, then trees sorted by y so the
+        // lower ones overlap the ones behind them.
         (function () {
-            const root = document.getElementById('countdown');
-            const target = new Date(root.dataset.target).getTime();
-            const fields = {
-                days: document.getElementById('cd-days'),
-                hours: document.getElementById('cd-hours'),
-                minutes: document.getElementById('cd-minutes'),
-                seconds: document.getElementById('cd-seconds')
-            };
+            const canvas = document.getElementById('scene');
+            const ctx = canvas.getContext('2d');
 
-            function pad(n, width) {
-                return String(n).padStart(width || 2, '0');
-            }
+            // where the tree actually is inside tree.png (64x96)
+            const TREE = { w: 64, h: 96, left: 3, right: 60, top: 7, base: 83 };
+            const GRASS = 16;
 
-            let timer = null;
-
-            function tick() {
-                // Recomputed from the clock each tick, so throttled or missed
-                // timers on mobile can never make the countdown drift.
-                const remaining = Math.max(0, target - Date.now());
-                const total = Math.floor(remaining / 1000);
-
-                fields.days.textContent = pad(Math.floor(total / 86400));
-                fields.hours.textContent = pad(Math.floor(total / 3600) % 24);
-                fields.minutes.textContent = pad(Math.floor(total / 60) % 60);
-                fields.seconds.textContent = pad(total % 60);
-
-                // Hides the countdown once it's over, including for visitors
-                // who load the page after the deadline.
-                if (remaining === 0) {
-                    root.classList.add('is-done');
-                    clearInterval(timer);
-                    timer = null;
-                }
-            }
-
-            if (!isNaN(target)) {
-                tick();
-                if (!root.classList.contains('is-done')) {
-                    timer = setInterval(tick, 1000);
-                }
-
-                // Mobile browsers freeze timers for backgrounded tabs; catch up
-                // the moment the page is visible again.
-                document.addEventListener('visibilitychange', function () {
-                    if (!document.hidden) {
-                        tick();
-                    }
+            function load(src) {
+                return new Promise(function (resolve, reject) {
+                    const img = new Image();
+                    img.onload = function () { resolve(img); };
+                    img.onerror = reject;
+                    img.src = src;
                 });
             }
+
+            // seeded random so the forest looks the same every time
+            function rng(seed) {
+                return function () {
+                    seed = (seed + 0x6d2b79f5) | 0;
+                    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+                    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+                    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                };
+            }
+
+            function token(name) {
+                return parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+            }
+
+            function layout(W, H) {
+                const s = token('--tw') / TREE.w;      // pixel-art scale
+                const bandY = token('--band-y');
+                const bandX = token('--band-x');
+                const tw = TREE.w * s;
+                const rand = rng(7);
+                const jitter = function (n) { return Math.round((rand() * 2 - 1) * n) * s; };
+                const trees = [];
+
+                function add(x, y) {
+                    trees.push({ x: x, y: Math.round(y) });
+                }
+
+                // top and bottom rows, every other row shifted by half a tree
+                const stepX = 54 * s;
+                const rowStep = 38 * s;
+                const startX = Math.round(W / 2 - tw / 2);
+                function row(y, k) {
+                    const offset = k % 2 ? 27 * s : 0;
+                    const n = Math.ceil(W / stepX / 2) + 1;
+                    for (let i = -n; i <= n; i++) {
+                        add(startX + offset + i * stepX, y);
+                    }
+                }
+                // top rows
+                for (let k = 0, base = bandY; base > 0; k++, base -= rowStep) {
+                    row(base - TREE.base * s, k);
+                }
+                // bottom rows
+                for (let k = 0, top = H - bandY; top < H; k++, top += rowStep) {
+                    row(top - TREE.top * s, k);
+                }
+
+                // left and right columns, fitted between the top and bottom
+                // rows so the corners don't overlap
+                const colStep = 29 * s;
+                const firstGround = bandY;
+                const lastGround = H - bandY + (TREE.base - TREE.top) * s;
+                const n = Math.max(2, Math.round((lastGround - firstGround) / (TREE.h * s * 0.55)));
+                const stepY = (lastGround - firstGround) / n;
+                for (let k = 0; ; k++) {
+                    const inner = bandX - k * colStep;
+                    if (inner <= 0) break;
+                    const leftX = Math.round(inner - TREE.right * s);
+                    const rightX = Math.round(W - inner - TREE.left * s);
+                    const shift = k % 2 ? 0.5 : 1;
+                    for (let i = shift; i < n; i++) {
+                        const y = firstGround + i * stepY - TREE.base * s;
+                        add(leftX, y + jitter(3));
+                        add(rightX, y + jitter(3));
+                    }
+                }
+
+                trees.sort(function (a, b) { return a.y - b.y; });
+
+                // grass tufts scattered on a loose grid
+                const grass = [];
+                const cell = GRASS * s * 3;
+                for (let gy = 0; gy < H; gy += cell) {
+                    for (let gx = 0; gx < W; gx += cell) {
+                        if (rand() < 0.55) {
+                            grass.push({
+                                x: Math.round(gx + rand() * (cell - GRASS * s)),
+                                y: Math.round(gy + rand() * (cell - GRASS * s))
+                            });
+                        }
+                    }
+                }
+
+                return { s: s, trees: trees, grass: grass };
+            }
+
+            function draw(tree, grassImg) {
+                const W = canvas.clientWidth;
+                const H = canvas.clientHeight;
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = Math.round(W * dpr);
+                canvas.height = Math.round(H * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                ctx.imageSmoothingEnabled = false;
+
+                const scene = layout(W, H);
+                const s = scene.s;
+                scene.grass.forEach(function (g) {
+                    ctx.drawImage(grassImg, g.x, g.y, GRASS * s, GRASS * s);
+                });
+                scene.trees.forEach(function (t) {
+                    ctx.drawImage(tree, Math.round(t.x), Math.round(t.y), TREE.w * s, TREE.h * s);
+                });
+            }
+
+            Promise.all([load('tree.png'), load('grass.png')]).then(function (imgs) {
+                let frame = 0;
+                function redraw() {
+                    cancelAnimationFrame(frame);
+                    frame = requestAnimationFrame(function () { draw(imgs[0], imgs[1]); });
+                }
+                redraw();
+                window.addEventListener('resize', redraw);
+            });
+
+            // Falling leaves, same settings as the particles in the Field scene.
+            const leafCanvas = document.getElementById('leaves');
+            const leafCtx = leafCanvas.getContext('2d');
+            const LEAF = 16;
+            const FRAMES = 3;
+            const LIFE = 7;
+            const SPEED = 0.6;
+            const GRAVITY_X = 30;
+            const GRAVITY_Y = 20;
+            const DEG = Math.PI / 180;
+            const FRAME_MS = 1000 / 60 - 1;
+            // 100 leaves per 1400x800, like the scene
+            const DENSITY = 100 / (1400 * 800);
+            // spawn a bit off screen up/left since they drift down/right
+            const MARGIN_X = 500;
+            const MARGIN_Y = 245;
+            const MAX_SCALE = 1.8;
+
+            function between(a, b) {
+                return a + Math.random() * (b - a);
+            }
+
+            function startLeaves(img) {
+                let W = 0, H = 0;   // screen size in game pixels
+                let s = 1;
+                let k = 1;
+                let px = 1;         // leaf pixel size
+                let sprites = null; // leafs.png scaled up once
+                let f = 1;
+                const leaves = [];
+
+                function advance(leaf, dt) {
+                    leaf.vx += GRAVITY_X * dt;
+                    leaf.vy += GRAVITY_Y * dt;
+                    leaf.x += leaf.vx * dt;
+                    leaf.y += leaf.vy * dt;
+                    leaf.rot += leaf.spin * dt;
+                    leaf.age += dt;
+                }
+
+                function spawn(leaf, age) {
+                    const angle = between(-20, 20) * DEG;
+                    const speed = between(20, 60);
+                    leaf.x = between(-MARGIN_X, W);
+                    leaf.y = between(-MARGIN_Y, H);
+                    leaf.vx = Math.cos(angle) * speed;
+                    leaf.vy = Math.sin(angle) * speed;
+                    leaf.rot = between(0, 360) * DEG;
+                    leaf.spin = between(-20, 50) * DEG;
+                    leaf.scale = between(0.8, MAX_SCALE);
+                    leaf.frame = Math.floor(Math.random() * FRAMES);
+                    leaf.age = 0;
+                    if (age) advance(leaf, age);
+                    return leaf;
+                }
+
+                // fade in, stay, fade out
+                function alpha(age) {
+                    const t = age / LIFE;
+                    if (t < 0.18) return t / 0.18;
+                    if (t < 0.79) return 1;
+                    return (1 - t) / 0.21;
+                }
+
+                function resize() {
+                    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                    const cssW = window.innerWidth;
+                    const cssH = window.innerHeight;
+                    s = token('--tw') / TREE.w;
+                    k = s * dpr;
+                    // at least 2x so they're still visible on phones
+                    px = Math.max(s, 2) * dpr;
+                    W = cssW / s;
+                    H = cssH / s;
+                    leafCanvas.width = Math.round(cssW * dpr);
+                    leafCanvas.height = Math.round(cssH * dpr);
+
+                    f = Math.max(1, Math.ceil(px * MAX_SCALE));
+                    sprites = document.createElement('canvas');
+                    sprites.width = LEAF * FRAMES * f;
+                    sprites.height = LEAF * f;
+                    const sctx = sprites.getContext('2d');
+                    sctx.imageSmoothingEnabled = false;
+                    sctx.drawImage(img, 0, 0, sprites.width, sprites.height);
+
+                    const target = Math.round(DENSITY * (W + MARGIN_X) * (H + MARGIN_Y));
+                    // random age so the screen starts full
+                    while (leaves.length < target) {
+                        leaves.push(spawn({}, Math.random() * LIFE));
+                    }
+                    leaves.length = target;
+                }
+
+                function step(dt) {
+                    for (let i = 0; i < leaves.length; i++) {
+                        const leaf = leaves[i];
+                        advance(leaf, dt);
+                        if (leaf.age >= LIFE) spawn(leaf, 0);
+                    }
+                }
+
+                function render() {
+                    const cw = leafCanvas.width;
+                    const ch = leafCanvas.height;
+                    const reach = LEAF * px * MAX_SCALE;
+                    const size = LEAF * f;
+                    leafCtx.setTransform(1, 0, 0, 1, 0, 0);
+                    leafCtx.clearRect(0, 0, cw, ch);
+                    leafCtx.imageSmoothingEnabled = true;
+                    for (let i = 0; i < leaves.length; i++) {
+                        const leaf = leaves[i];
+                        const x = leaf.x * k;
+                        const y = leaf.y * k;
+                        if (x < -reach || y < -reach || x > cw + reach || y > ch + reach) continue;
+                        const scale = leaf.scale * px / f;
+                        const cos = Math.cos(leaf.rot) * scale;
+                        const sin = Math.sin(leaf.rot) * scale;
+                        leafCtx.setTransform(cos, sin, -sin, cos, x, y);
+                        leafCtx.globalAlpha = alpha(leaf.age);
+                        leafCtx.drawImage(sprites, leaf.frame * size, 0, size, size,
+                            -size / 2, -size / 2, size, size);
+                    }
+                    leafCtx.globalAlpha = 1;
+                }
+
+                resize();
+                render();
+
+                let resizeFrame = 0;
+                window.addEventListener('resize', function () {
+                    cancelAnimationFrame(resizeFrame);
+                    resizeFrame = requestAnimationFrame(function () {
+                        resize();
+                        render();
+                    });
+                });
+
+                // no animation for reduced motion
+                if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+                // capped at 60fps
+                let last = performance.now();
+                function tick(now) {
+                    requestAnimationFrame(tick);
+                    const elapsed = now - last;
+                    if (elapsed < FRAME_MS) return;
+                    last = now;
+                    step(Math.min(elapsed / 1000, 0.1) * SPEED);
+                    render();
+                }
+                requestAnimationFrame(tick);
+            }
+
+            load('leafs.png').then(startLeaves);
+        })();
+
+        // Steam button: on desktop try the Steam client first, and open the
+        // store page in the browser if nothing picks up the steam:// link.
+        // Phones just follow the https link, the Steam app catches it there.
+        (function () {
+            const link = document.getElementById('wishlist');
+            const appUrl = link.dataset.app;
+            const webUrl = link.href;
+            const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            if (mobile) return;
+
+            link.addEventListener('click', function (e) {
+                // let ctrl/shift/middle clicks open the store page as usual
+                if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+
+                let left = false;
+                function onLeave() { left = true; }
+                window.addEventListener('blur', onLeave, { once: true });
+                document.addEventListener('visibilitychange', onLeave, { once: true });
+
+                window.location.href = appUrl;
+
+                setTimeout(function () {
+                    window.removeEventListener('blur', onLeave);
+                    document.removeEventListener('visibilitychange', onLeave);
+                    // the browser kept focus, so Steam didn't open
+                    if (left) return;
+                    // no 'noopener' feature here, it makes window.open return
+                    // null and we need to know if the popup was blocked
+                    const tab = window.open(webUrl, '_blank');
+                    if (tab) tab.opener = null;
+                    else window.location.href = webUrl;
+                }, 1200);
+            });
         })();
 
         (function () {

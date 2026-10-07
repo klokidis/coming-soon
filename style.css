@@ -8,12 +8,23 @@
     padding: 0;
     box-sizing: border-box;
 }
+/* Shared sizes. --tw is the tree width (keep it a multiple of 64 so the
+   pixels stay crisp), --band-x/--band-y are how far the trees reach in. */
+:root {
+    --tw: 128px;
+    --band-y: 120px;
+    --band-x: 96px;
+    --logo: 128px;
+    --btn-h: 60px;
+    --gap: 25px;
+    --pad: 16px;
+}
 html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
 }
 body {
-    background: #000;
+    background: #2b8153;
     color: #fff;
     width: 100%;
     min-height: 100vh;
@@ -22,65 +33,105 @@ body {
     justify-content: center;
     align-items: center;
     overflow-x: hidden;
-    /*
-     * Padding stays symmetric on both axes so the flex centering lands the
-     * content group on the exact centre of the viewport. Each side clears the
-     * taller of the two fixed bars, and the horizontal padding takes the
-     * larger of the two safe-area insets so a notch on one edge only (landscape
-     * phones) can't nudge the group off-centre.
-     */
-    padding: 110px 20px;
-    padding-left: max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
-    padding-right: max(20px, env(safe-area-inset-left), env(safe-area-inset-right));
+    /* keeps the content centred and clear of the trees */
+    padding: calc(var(--band-y) + var(--pad)) calc(var(--band-x) + var(--pad));
     -webkit-font-smoothing: antialiased;
 }
-.top-bar {
+
+/* grass + trees canvas */
+.scene {
     position: fixed;
-    top: 0;
-    left: 0;
+    inset: 0;
     width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 50px;
-    padding: 60px 60px;
-    padding-top: max(60px, env(safe-area-inset-top));
-    padding-right: max(60px, env(safe-area-inset-right));
-    z-index: 10;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
 }
-.social-icon {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
+/* falling leaves canvas */
+.leaves {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.logo {
+    width: var(--logo);
+    height: var(--logo);
     display: block;
-    opacity: 0.85;
-    filter: brightness(0) invert(1);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.top-bar a:hover .social-icon {
-    opacity: 1;
-    transform: translateY(-2px);
+    /* logo.png has empty space above and below the characters */
+    margin: calc(var(--logo) * -0.06) 0 calc(var(--logo) * -0.093);
+    filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.6));
 }
 .bottom-bar {
     position: fixed;
-    bottom: 0;
+    bottom: env(safe-area-inset-bottom, 0px);
     left: 0;
     width: 100%;
+    height: var(--band-y);
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 20px 20px;
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding: 0 20px;
     z-index: 10;
+}
+/* social icons, top right under the trees */
+.socials {
+    --soc: 64px;
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + var(--band-y) + var(--pad));
+    right: calc(var(--band-x) + var(--pad));
+    z-index: 10;
+    display: flex;
+    gap: 20px;
+}
+.socials a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--soc);
+    height: var(--soc);
+    transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 12px;
+    -webkit-tap-highlight-color: transparent;
+}
+.social-icon {
+    width: 56%;
+    height: 56%;
+    object-fit: contain;
+    display: block;
+    filter: brightness(0) invert(1) drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+    transition: filter 0.2s ease;
+}
+.socials a:hover,
+.socials a:focus-visible {
+    background: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #1e5e3c;
+}
+.socials a:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #1e5e3c;
+}
+.socials a:hover .social-icon,
+.socials a:focus-visible .social-icon {
+    filter: brightness(0);
+}
+.socials a:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 6px;
 }
 .contact-email {
     position: relative;
     font-family: "Jersey15", sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     letter-spacing: 1px;
     color: #fff;
     text-decoration: none;
-    opacity: 0.85;
+    text-shadow: 0 2px 0 #000, 0 0 6px #000;
+    opacity: 0.9;
     transition: opacity 0.2s ease;
     background: none;
     border: 0;
@@ -123,79 +174,65 @@ body {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
 }
-/*
- * --w is the shared width of the video and the countdown row. It's capped by
- * the viewport width and by the height left after the bars, logo and gaps
- * (--reserve), so the whole group always fits on one screen. The 1.4 factor
- * turns that leftover height into a width: the video is 0.5625w tall and the
- * countdown roughly 0.15w.
- */
+/* --w = video width, sized so logo + video + button fit on one screen */
 .content {
-    --reserve: 410px;
-    --gutter: 40px;
-    --w: clamp(220px, min(100vw - var(--gutter), (100vh - var(--reserve)) * 1.4), 800px);
+    --gutter: calc(2 * (var(--band-x) + var(--pad)));
+    --reserve: calc(2 * (var(--band-y) + var(--pad)) + var(--logo) + var(--btn-h) + 2 * var(--gap));
+    --w: clamp(200px, min((100vw - var(--gutter)) * 0.9, (100vh - var(--reserve)) * 16 / 9), 760px);
     position: relative;
+    z-index: 2;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 25px;
+    gap: var(--gap);
     width: 100%;
     max-width: 100%;
 }
 @supports (height: 100dvh) {
     .content {
-        --w: clamp(220px, min(100vw - var(--gutter), (100dvh - var(--reserve)) * 1.4), 800px);
+        --w: clamp(200px, min((100vw - var(--gutter)) * 0.9, (100dvh - var(--reserve)) * 16 / 9), 760px);
     }
 }
-.logo {
-    width: 140px;
-    max-width: 45vw;
-    height: auto;
-    display: block;
-}
-/*
- * The countdown row is sized from one custom property so every part scales
- * together. Its full width is roughly 8em, so --w / 9 keeps it just inside
- * the video's width.
- */
-.countdown {
-    --cd: calc(var(--w) / 9);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 0.14em;
-    font-family: "Jersey15", sans-serif;
-    font-size: var(--cd);
-    max-width: 100%;
-}
-.countdown .unit {
-    display: flex;
-    flex-direction: column;
+/* steam button */
+.wishlist {
+    display: inline-flex;
     align-items: center;
-    min-width: 1.9em;
-}
-.countdown .value {
+    gap: 0.5em;
+    height: var(--btn-h);
+    padding: 0 1.4em;
+    font-family: "Jersey15", sans-serif;
+    font-size: 28px;
     line-height: 1;
-    letter-spacing: 0.03em;
-    font-variant-numeric: tabular-nums;
-}
-.countdown .label {
-    /* Keeps labels legible once --cd gets small on phones. */
-    font-size: max(0.8rem, 0.22em);
-    line-height: 1;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     white-space: nowrap;
-    opacity: 0.6;
-    margin-top: 0.85em;
+    color: #1b2838;
+    text-decoration: none;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 4px 0 #1e5e3c;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
 }
-.countdown .sep {
-    line-height: 1;
-    opacity: 0.35;
+.wishlist-icon {
+    width: 1.15em;
+    height: 1.15em;
+    display: block;
+    flex: none;
 }
-.countdown.is-done {
-    display: none;
+.wishlist:hover,
+.wishlist:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #1e5e3c;
+}
+.wishlist:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #1e5e3c;
+}
+.wishlist:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 6px;
 }
 
 .video {
@@ -213,123 +250,74 @@ body {
 
 /* --- Tablet --- */
 @media (max-width: 768px) {
-    body {
-        padding: 90px 20px;
+    :root {
+        --band-y: 100px;
+        --band-x: 64px;
+        --logo: 96px;
+        --btn-h: 50px;
+        --gap: 18px;
+        --pad: 12px;
     }
-    .top-bar {
-        gap: 32px;
-        padding: 32px 32px;
-        padding-top: max(32px, env(safe-area-inset-top));
-        padding-right: max(32px, env(safe-area-inset-right));
+    .socials {
+        --soc: 56px;
+        gap: 16px;
     }
-    .social-icon {
-        width: 26px;
-        height: 26px;
+    .wishlist {
+        font-size: 22px;
     }
-    .content {
-        --reserve: 325px;
-        gap: 18px;
+    .contact-email {
+        font-size: 1.35rem;
     }
-    .logo {
-        width: 105px;
+}
+
+/* --- Phone --- */
+@media (max-width: 480px) {
+    :root {
+        --tw: 64px;
+        --band-y: 64px;
+        --band-x: 34px;
+        --logo: 72px;
+        --btn-h: 48px;
+        --gap: 14px;
+        --pad: 8px;
     }
-    .bottom-bar {
-        padding: 28px 20px;
-        padding-bottom: max(28px, env(safe-area-inset-bottom));
+    .socials {
+        --soc: 52px;
+        gap: 12px;
+    }
+    .wishlist {
+        font-size: 20px;
+    }
+    .contact-email {
+        font-size: 1.2rem;
+    }
+}
+
+/* --- Landscape phone (short viewport) --- */
+@media (max-height: 480px) and (orientation: landscape) {
+    :root {
+        --tw: 64px;
+        --band-y: 48px;
+        --band-x: 48px;
+        --logo: 52px;
+        --btn-h: 38px;
+        --gap: 8px;
+        --pad: 6px;
+    }
+    .socials {
+        --soc: 46px;
+        gap: 14px;
+    }
+    .wishlist {
+        font-size: 18px;
     }
     .contact-email {
         font-size: 1.1rem;
     }
 }
 
-/* --- Phone --- */
-@media (max-width: 480px) {
-    body {
-        padding: 84px 12px;
-        padding-left: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
-        padding-right: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
-    }
-    .top-bar {
-        gap: 22px;
-        padding: 20px 20px;
-        padding-top: max(20px, env(safe-area-inset-top));
-        padding-right: max(20px, env(safe-area-inset-right));
-    }
-    .social-icon {
-        width: 22px;
-        height: 22px;
-    }
-    .content {
-        --reserve: 285px;
-        --gutter: 24px;
-        gap: 14px;
-    }
-    .logo {
-        width: 85px;
-    }
-    .countdown {
-        gap: 0.1em;
-    }
-    .countdown .label {
-        font-size: max(0.8rem, 0.22em);
-        letter-spacing: 0.08em;
-        margin-top: 0.7em;
-    }
-    .bottom-bar {
-        padding: 20px;
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-    }
-    .contact-email {
-        font-size: 1rem;
-    }
-}
-
-/* --- Landscape phone (short viewport) --- */
-@media (max-height: 480px) and (orientation: landscape) {
-    body {
-        padding: 68px 20px;
-    }
-    .top-bar {
-        padding: 14px 20px;
-        padding-top: max(14px, env(safe-area-inset-top));
-        gap: 20px;
-    }
-    .social-icon {
-        width: 20px;
-        height: 20px;
-    }
-    .content {
-        --reserve: 200px;
-        gap: 8px;
-    }
-    .logo {
-        width: 48px;
-    }
-    .countdown .label {
-        margin-top: 0.6em;
-    }
-    .bottom-bar {
-        padding: 12px 20px;
-        padding-bottom: max(12px, env(safe-area-inset-bottom));
-    }
-    .contact-email {
-        font-size: 0.95rem;
-    }
-}
-
-/* Tap targets stay finger-friendly without enlarging the icons */
+/* bigger tap area for the email on touch screens */
 @media (hover: none) {
-    .top-bar a {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 44px;
-        min-height: 44px;
-    }
-    .top-bar a:hover .social-icon,
-    .top-bar a:active .social-icon {
-        transform: none;
-    }
     .contact-email {
         min-height: 44px;
         padding: 10px 8px;
