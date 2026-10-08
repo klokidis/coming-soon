@@ -51,7 +51,7 @@
     </div>
 
     <script>
-        // Forest background: grass first, then trees sorted by y so the
+        // Forest background: grass, flowers and mushrooms first, then trees sorted by y so the
         // lower ones overlap the ones behind them.
         (function () {
             const canvas = document.getElementById('scene');
@@ -139,24 +139,47 @@
 
                 trees.sort(function (a, b) { return a.y - b.y; });
 
-                // grass tufts scattered on a loose grid
-                const grass = [];
+                // ground tiles on a loose grid: grass scattered at random,
+                // plus flowers (yellow on the left half, blue on the right)
+                // and mushrooms on a staggered grid so they stay evenly spaced
+                const ground = [];
                 const cell = GRASS * s * 3;
-                for (let gy = 0; gy < H; gy += cell) {
-                    for (let gx = 0; gx < W; gx += cell) {
-                        if (rand() < 0.55) {
-                            grass.push({
+                const DECOR = 4;        // one flower/mushroom per 4x4 cells
+                let bag = [];           // 1 mushroom in every 5 decorations
+                function nextDecor() {
+                    if (!bag.length) {
+                        bag = [true, false, false, false, false];
+                        for (let i = bag.length - 1; i > 0; i--) {
+                            const j = Math.floor(rand() * (i + 1));
+                            const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+                        }
+                    }
+                    return bag.pop();
+                }
+                for (let j = 0, gy = 0; gy < H; j++, gy += cell) {
+                    const stagger = Math.floor(j / DECOR) % 2 ? DECOR / 2 : 0;
+                    for (let i = 0, gx = 0; gx < W; i++, gx += cell) {
+                        if (j % DECOR === DECOR / 2 && (i + stagger) % DECOR === DECOR / 2) {
+                            const half = (cell - GRASS * s) / 2;
+                            const x = Math.round(gx + half + jitter(4));
+                            const y = Math.round(gy + half + jitter(4));
+                            const kind = nextDecor() ? 'mushroom'
+                                : x + GRASS * s / 2 < W / 2 ? 'yellow' : 'blue';
+                            ground.push({ x: x, y: y, kind: kind });
+                        } else if (rand() < 0.55) {
+                            ground.push({
                                 x: Math.round(gx + rand() * (cell - GRASS * s)),
-                                y: Math.round(gy + rand() * (cell - GRASS * s))
+                                y: Math.round(gy + rand() * (cell - GRASS * s)),
+                                kind: 'grass'
                             });
                         }
                     }
                 }
 
-                return { s: s, trees: trees, grass: grass };
+                return { s: s, trees: trees, ground: ground };
             }
 
-            function draw(tree, grassImg) {
+            function draw(tree, tiles) {
                 const W = canvas.clientWidth;
                 const H = canvas.clientHeight;
                 const dpr = window.devicePixelRatio || 1;
@@ -167,19 +190,23 @@
 
                 const scene = layout(W, H);
                 const s = scene.s;
-                scene.grass.forEach(function (g) {
-                    ctx.drawImage(grassImg, g.x, g.y, GRASS * s, GRASS * s);
+                scene.ground.forEach(function (g) {
+                    ctx.drawImage(tiles[g.kind], g.x, g.y, GRASS * s, GRASS * s);
                 });
                 scene.trees.forEach(function (t) {
                     ctx.drawImage(tree, Math.round(t.x), Math.round(t.y), TREE.w * s, TREE.h * s);
                 });
             }
 
-            Promise.all([load('tree.png'), load('grass.png')]).then(function (imgs) {
+            Promise.all([
+                load('tree.png'), load('grass.png'), load('yellow_flower.png'),
+                load('blue_flower.png'), load('mushroom.png')
+            ]).then(function (imgs) {
+                const tiles = { grass: imgs[1], yellow: imgs[2], blue: imgs[3], mushroom: imgs[4] };
                 let frame = 0;
                 function redraw() {
                     cancelAnimationFrame(frame);
-                    frame = requestAnimationFrame(function () { draw(imgs[0], imgs[1]); });
+                    frame = requestAnimationFrame(function () { draw(imgs[0], tiles); });
                 }
                 redraw();
                 window.addEventListener('resize', redraw);
